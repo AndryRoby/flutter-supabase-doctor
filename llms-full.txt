@@ -1,0 +1,144 @@
+# Flutter Supabase Doctor — supabase_flutter deep links
+
+> Free, client-side checker that finds why a Supabase Auth OAuth or magic-link deep link never returns to a Flutter app built with supabase_flutter, and gives the exact fix for Info.plist, AndroidManifest.xml, the Supabase dashboard, or your Dart code.
+
+Fill in your app's URL scheme/host, launch mode, flow type, Supabase project URL / Site URL / Redirect URLs allow-list, the OAuth provider, and a few flags about your code, and it works out the exact `scheme://host` your app should register, then cross-checks every layer against it and reports concrete mismatches — no generic advice, no account, no backend.
+
+## What it checks
+
+- **Scheme validity** — empty, reserved (`http`/`https`, which only works via Universal Links / App Links, a separate https-based setup), uppercase letters or whitespace, invalid characters, or an **underscore** in the scheme or host. Google's OAuth redirect handling mangles underscores in redirect URLs, so a scheme or host like `my_app` *always* fails Supabase's redirect-URL check and silently falls back to Site URL — tracked upstream at [supabase/auth#2447](https://github.com/supabase/auth/issues/2447). A hyphen works fine.
+- **`redirectTo` vs. `scheme://host`** — whether the value your Dart code passes to `signInWithOAuth()` / `resetPasswordForEmail()` matches the scheme + host you configured, byte-for-byte (a trailing slash alone is enough to break the match).
+- **Supabase Redirect URLs allow-list coverage** — matched with the same glob syntax Supabase itself uses (`*`, `**`, `?`, character classes, `\` escapes).
+- **Supabase Site URL** — flags `localhost` still set, which is what a rejected redirect silently falls back to, including from production installs.
+- **iOS `Info.plist`** — whether `CFBundleURLSchemes` actually lists your scheme; without it iOS never hands the redirect back to your app.
+- **Android `AndroidManifest.xml`** — whether an intent-filter exists at all, and whether its `android:scheme` / `android:host` match; also flags `android:autoVerify="true"` left on a custom-scheme filter, which has no effect there (autoVerify only matters for https Android App Links).
+- **`authScreenLaunchMode`** — flags `LaunchMode.inAppWebView`, because several providers (Kakao, Discord, Facebook) detect an embedded WebView and either refuse to complete sign-in or never hand control back to the OS to fire the custom-scheme redirect, so the flow just hangs on the provider's page.
+- **`authFlowType`** — recommends PKCE over implicit for native apps, since implicit returns the session in a URL fragment that in-app browsers and deep links don't always preserve intact.
+- **OAuth provider console** (Google Cloud Console, Apple Services ID, GitHub OAuth App, Discord Developer Portal, Kakao Developers) — whether it has the exact `https://<ref>.supabase.co/auth/v1/callback`, and specifically flags the common mistake of pasting your app's own scheme there instead (the provider redirects to Supabase first; only Supabase then redirects on to your app).
+- **`onAuthStateChange` listener** — without one, sign-in can complete while the UI still shows a logged-out screen.
+
+## Who it's for
+
+Flutter developers using `supabase_flutter` for OAuth or magic-link sign-in whose redirect hangs on the provider's page, opens Safari or a Chrome Custom Tab and stops there, or brings the app back to the foreground still signed out — on Android, iOS, or both.
+
+## How it works
+
+Static HTML plus one dependency-free JavaScript file, `doctor-flutter.js`. The page calls a single pure function, `diagnose(config)`, entirely in your browser:
+
+```js
+import { diagnose } from './doctor-flutter.js';
+
+const result = diagnose({
+  app: {
+    scheme, host, androidPackage, iosBundleId,
+    launchMode,        // 'externalApplication' | 'inAppWebView' | 'platformDefault' | 'inAppBrowserView' | ''
+    authFlowType,       // 'pkce' | 'implicit' | ''
+    iosSchemesInPlist,  // string[] — CFBundleURLSchemes as configured
+    androidIntentFilter, // { scheme, host, autoVerify }
+  },
+  supabase: { projectUrl, siteUrl, allowedRedirectUrls },
+  provider: { name, authorizedRedirectUris }, // name: 'google'|'apple'|'github'|'discord'|'kakao'|'other'
+  code: { redirectTo, usesSkipBrowserRedirect, listensToAuthStateChange },
+});
+```
+
+There is no backend, no SDK key, and no request that carries your configuration anywhere — read `index.html` and `doctor-flutter.js` directly to verify. It shares its glob-matching logic verbatim with the sibling web and Expo tools, since the allow-list syntax is a Supabase Auth feature identical for every client.
+
+## Worked example
+
+Input — a Flutter app whose Android package and derived URL scheme use an underscore (a very common pattern, since Java/Kotlin package names allow them but URL schemes don't), everything else wired up correctly:
+
+```json
+{
+  "app": {
+    "scheme": "my_app",
+    "host": "login-callback",
+    "launchMode": "externalApplication",
+    "authFlowType": "pkce",
+    "iosSchemesInPlist": ["my_app"],
+    "androidIntentFilter": { "scheme": "my_app", "host": "login-callback", "autoVerify": false }
+  },
+  "supabase": {
+    "projectUrl": "https://abcd1234.supabase.co",
+    "siteUrl": "https://myapp.com",
+    "allowedRedirectUrls": ["my_app://**"]
+  },
+  "provider": {
+    "name": "google",
+    "authorizedRedirectUris": ["https://abcd1234.supabase.co/auth/v1/callback"]
+  },
+  "code": {
+    "redirectTo": "my_app://login-callback",
+    "usesSkipBrowserRedirect": false,
+    "listensToAuthStateChange": true
+  }
+}
+```
+
+Output:
+
+```json
+{
+  "status": "fail",
+  "summary": "1 blocking mismatch found. Most urgent: \"my_app\" contains an underscore. Google's OAuth redirect handling mangles underscores in redirect URLs — a scheme or host like \"my_app\" *always* fails Supabase's redirect-URL check and silently falls back to Site URL (tracked in supabase/auth#2447). Use a hyphen instead.",
+  "problems": [
+    {
+      "severity": "high",
+      "code": "scheme_underscore",
+      "message": "\"my_app\" contains an underscore. Google's OAuth redirect handling mangles underscores in redirect URLs — a scheme or host like \"my_app\" *always* fails Supabase's redirect-URL check and silently falls back to Site URL (tracked in supabase/auth#2447). Use a hyphen instead.",
+      "where": "app.scheme"
+    }
+  ],
+  "fixes": [
+    { "title": "Replace underscores with hyphens", "value": "my-app", "where": "app.scheme" }
+  ],
+  "checklist": [
+    "Add \"my_app://**\" (covers every path under your scheme) to the Supabase redirect allow-list.",
+    "Add \"https://abcd1234.supabase.co/auth/v1/callback\" to \"Authorized redirect URIs\" in Google Cloud Console → APIs & Services → Credentials — exact match, no wildcards.",
+    "Use authFlowType: AuthFlowType.pkce and authScreenLaunchMode: LaunchMode.externalApplication together.",
+    "Re-run this check after every change — Info.plist, AndroidManifest.xml, and the Supabase/provider consoles drift independently from your Dart code."
+  ]
+}
+```
+
+Every other layer here is wired up consistently — `Info.plist`, the Android intent-filter, the allow-list entry, and the Google Cloud Console callback all agree with each other — so this is a case a manual review would likely wave through. The scheme itself is still silently broken end to end, which is why the tool checks character validity as a standalone, high-severity issue rather than only comparing layers against each other.
+
+## FAQ
+
+**Why does my Supabase OAuth login work in the dashboard but never return to my Flutter app?**
+The most common causes, in order: the custom URL scheme has an invalid character (especially an underscore, which Google's OAuth redirect handling silently mangles); `Info.plist` or the `AndroidManifest.xml` intent-filter don't actually register the scheme your code uses; the value isn't covered by the Supabase Redirect URLs allow-list; or `authScreenLaunchMode` is `LaunchMode.inAppWebView`, which several providers refuse to complete inside.
+
+**Why does an underscore in my app's URL scheme break Google sign-in with Supabase?**
+Google's OAuth redirect handling strips or otherwise mangles underscores in the redirect URL it sends back, so a scheme like `my_app://callback` never matches what's on Supabase's Redirect URLs allow-list — Supabase then falls back to Site URL instead, which is often still `localhost` or the wrong domain. This is documented in [supabase/auth#2447](https://github.com/supabase/auth/issues/2447); the fix is to use a hyphen (`my-app://callback`) instead.
+
+**What redirect URI do I put in Google Cloud Console for a Supabase + Flutter app?**
+Supabase's own callback, `https://<your-project-ref>.supabase.co/auth/v1/callback` — not your app's custom scheme. In the OAuth handshake, Google redirects to Supabase first; only after Supabase processes that does it redirect on to your app's `scheme://host`. Pasting your app's scheme into the provider console instead of Supabase's callback is one of the most common configuration mistakes.
+
+**Why does Kakao (or Discord, or Facebook) login hang on the provider's page in a Flutter app?**
+These providers detect when they're running inside an embedded WebView and either refuse to complete sign-in or never hand control back to the OS to fire your app's custom-scheme redirect — so with `authScreenLaunchMode: LaunchMode.inAppWebView` the flow just stalls. Switch to `LaunchMode.externalApplication` so the OS opens a real browser (or Custom Tab / SFSafariViewController), which can actually trigger the redirect back to your app.
+
+**Does `android:autoVerify="true"` do anything for a custom URL scheme intent-filter?**
+No. `autoVerify` only triggers Digital Asset Links verification for Android App Links, which use `https` and require a hosted `assetlinks.json`. On a custom-scheme intent-filter (e.g. `myapp://`) it is silently ignored — leaving it there just invites confusion later when someone assumes it's doing something.
+
+**Should I use PKCE or implicit flow with supabase_flutter?**
+PKCE, which is the `supabase_flutter` default. Implicit flow returns the session in a URL fragment (`#access_token=...`), and in-app browsers, Custom Tabs, and some deep-link paths don't always preserve a URL fragment intact end to end. PKCE instead returns a short-lived `?code=` that's exchanged for a session, which is more robust across the exact hop your OAuth redirect takes.
+
+**Why does my UI still show a logged-out screen even though the deep link reached my app?**
+`supabase_flutter` parses the session from the incoming deep link automatically, but nothing updates your UI without your own listener. Add `supabase.auth.onAuthStateChange.listen((data) { ... })` (typically near app startup) and update navigation/state from there — otherwise sign-in can complete internally while the screen never reflects it.
+
+## Privacy
+
+No account, no login, no cookies for the tool itself, no server-side processing of your config. The only analytics are anonymous usage counts (event name + count, never the content of what you entered) sent to a self-hosted Umami instance.
+
+## Links
+
+- Tool: https://arling.sk/flutter-supabase-doctor/
+- Short reference: https://arling.sk/flutter-supabase-doctor/llms.txt
+- Source code: https://github.com/AndryRoby/flutter-supabase-doctor
+- Sibling tool for web apps (Next.js/Vite/SvelteKit): https://arling.sk/supabase-redirect-doctor/
+- Sibling tool for Expo / React Native: https://arling.sk/expo-supabase-auth-doctor/
+- Hub (more ARLing tools): https://arling.sk/
+
+## Contact
+
+Built by ARLing s. r. o. (Bratislava, Slovakia). andrej@arling.sk

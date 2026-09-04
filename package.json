@@ -1,0 +1,12 @@
+{
+  "name": "flutter-supabase-doctor",
+  "version": "1.0.0",
+  "description": "Supabase Auth Deep Link Doctor for Flutter (supabase_flutter) — free, client-side diagnostic for OAuth/magic-link deep links that don't return to the app.",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node tests.mjs"
+  },
+  "license": "MIT",
+  "author": "ARLing s. r. o. <andrej@arling.sk>"
+}

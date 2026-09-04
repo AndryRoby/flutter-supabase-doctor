@@ -1,0 +1,42 @@
+# Flutter Supabase Doctor — supabase_flutter deep links
+
+> Free, client-side checker that finds why a Supabase Auth OAuth or magic-link deep link never returns to a Flutter app built with supabase_flutter, and gives the exact fix for Info.plist, AndroidManifest.xml, the Supabase dashboard, or your Dart code.
+
+Fill in your app's URL scheme/host, launch mode, flow type, Supabase project URL / Site URL / Redirect URLs allow-list, the OAuth provider, and a few flags about your code, and it cross-checks them against what iOS, Android, and Supabase's own redirect matching actually require — no account, no backend, nothing you type leaves your browser.
+
+## What it checks
+
+- Scheme validity: empty, reserved (`http`/`https`), uppercase, whitespace, or an underscore in the scheme/host — underscores silently fail Google's OAuth redirect matching and fall back to Site URL ([supabase/auth#2447](https://github.com/supabase/auth/issues/2447)).
+- `redirectTo` vs. `scheme://host`: whether your Dart code's `redirectTo` matches exactly (a trailing slash is enough to break it).
+- Supabase Redirect URLs allow-list coverage, matched with the same glob syntax Supabase uses (`*`, `**`, `?`, character classes).
+- iOS `Info.plist`: whether `CFBundleURLSchemes` actually lists your scheme.
+- Android `AndroidManifest.xml`: whether the intent-filter's `android:scheme` / `android:host` match, and whether `android:autoVerify="true"` was left on (no effect on a custom scheme).
+- `authScreenLaunchMode`: flags `LaunchMode.inAppWebView`, which hangs several providers (Kakao, Discord, Facebook) that refuse to complete inside an embedded WebView.
+- `authFlowType`: recommends PKCE over implicit for native apps.
+- OAuth provider console (Google, Apple, GitHub, Discord, Kakao): whether it has the exact `https://<ref>.supabase.co/auth/v1/callback`, and flags the common mistake of pasting your app's own scheme there instead.
+- Whether you listen to `onAuthStateChange` — without it, sign-in can complete while the UI still shows a logged-out screen.
+
+## Who it's for
+
+Flutter developers using `supabase_flutter` for OAuth or magic-link sign-in whose redirect hangs on the provider's page, opens Safari/Chrome Custom Tabs and stops there, or brings the app back to the foreground still signed out.
+
+## How it works
+
+Static HTML plus one dependency-free JavaScript file, `doctor-flutter.js`. All checks run in your browser against the values you type; the tool has no backend and makes no request that carries your configuration anywhere.
+
+## Privacy
+
+No account, no login, no cookies for the tool itself, no server-side processing of your config. The only analytics are anonymous usage counts (event name + count, never the content of what you entered) sent to a self-hosted Umami instance.
+
+## Links
+
+- Tool: https://arling.sk/flutter-supabase-doctor/
+- Full reference (worked example + FAQ): https://arling.sk/flutter-supabase-doctor/llms-full.txt
+- Source code: https://github.com/AndryRoby/flutter-supabase-doctor
+- Sibling tool for web apps (Next.js/Vite/SvelteKit): https://arling.sk/supabase-redirect-doctor/
+- Sibling tool for Expo / React Native: https://arling.sk/expo-supabase-auth-doctor/
+- Hub (more ARLing tools): https://arling.sk/
+
+## Contact
+
+Built by ARLing s. r. o. (Bratislava, Slovakia). andrej@arling.sk
