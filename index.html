@@ -281,6 +281,16 @@
   }
   .endpoint-copy p { margin:0 0 14px; color:var(--ink-2); font-size:15px; line-height:1.6; overflow-wrap:anywhere; }
 
+  /* ── subscribe ── */
+  .subscribe-ask { border-top:1px solid var(--line); margin-top:24px; padding-top:24px; }
+  .subscribe-form { display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
+  .subscribe-form input[type="email"] { height:44px; min-width:0; flex:1 1 240px; padding:0 14px; border:1px solid var(--line); border-radius:4px; background:var(--paper-2); color:var(--ink); font:15px/1 var(--sans); }
+  .subscribe-form input[type="email"]::placeholder { color:var(--muted); }
+  .subscribe-form .btn { flex:none; }
+  .hp { position:absolute; width:1px; height:1px; margin:-1px; padding:0; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
+  #subscribe-thanks { color:var(--ok); font-weight:600; }
+  #subscribe-error { color:var(--accent); font-weight:600; }
+
   /* ── FAQ ── */
   details { border-top:1px solid var(--line); padding:14px 0; }
   details:last-of-type { border-bottom:1px solid var(--line); }
@@ -300,6 +310,7 @@
     nav.main a { margin-left:12px; }
     .wordmark small { display:none; }
     .btn + .btn { margin-left:0; margin-top:10px; }
+    .subscribe-form input[type="email"], .subscribe-form button { width:100%; }
   }
 </style>
 </head>
@@ -581,7 +592,16 @@ const result = diagnose({
       <p class="kicker">04</p>
       <h2>Free.</h2>
       <p class="sub">No account, no payment, no rate limit. This started as a tool I needed myself. If it saves you an afternoon, tell me what it got wrong: <a href="https://github.com/AndryRoby/flutter-supabase-doctor/issues" target="_blank" rel="noopener">open a GitHub issue</a>.</p>
-      <button class="btn btn-line" id="pro-interest-btn" type="button">I'd use a Pro version: a CI check that fails the build on drift</button>
+      <div class="subscribe-ask" id="subscribe">
+        <p><b>Tell me when a new tool lands.</b> New tools only. No newsletter, no sharing. Reply to any mail to be removed.</p>
+        <form id="subscribe-form" class="subscribe-form" data-subscribe data-source="flutter" data-lang="en" data-thanks="subscribe-thanks" data-error="subscribe-error" novalidate>
+          <div class="hp" aria-hidden="true"><input type="text" name="website" id="subscribe-website" tabindex="-1" autocomplete="off"></div>
+          <input type="email" id="subscribe-email" name="email" required autocomplete="email" inputmode="email" placeholder="you@example.com" aria-label="Email address">
+          <button class="btn btn-solid" type="submit">Notify me</button>
+        </form>
+        <p id="subscribe-thanks" hidden>Thanks. You will hear from us only when something new is live.</p>
+        <p id="subscribe-error" hidden>Could not save. Write to <a href="mailto:andrej@arling.sk">andrej@arling.sk</a>.</p>
+      </div>
     </div>
   </section>
 
@@ -627,6 +647,7 @@ const result = diagnose({
       <a href="https://arling.sk/expo-supabase-auth-doctor/">Building an Expo app instead?</a> ·
       <a href="https://arling.sk/supabase-redirect-doctor/">Building a web app instead?</a> ·
       <a href="https://github.com/AndryRoby/flutter-supabase-doctor/issues">Report a missed case</a> ·
+      <a href="https://arling.sk/privacy/">Privacy</a> ·
       <a href="llms.txt">llms.txt</a> ·
       <a href="https://arling.sk/">ARLing</a>
       <br>Provided as is, without warranty, as a free tool. Anonymous visit and click counts via self-hosted Umami; never what you type.
@@ -634,6 +655,7 @@ const result = diagnose({
   </div>
 </footer>
 
+<script src="subscribe.js" defer></script>
 <script type="module">
   import { diagnose, expectedValues } from './doctor-flutter.js';
 
@@ -679,7 +701,6 @@ const result = diagnose({
   const copyBtn = $('copy-btn');
   const rawToggleBtn = $('raw-toggle-btn');
   const copyLinkBtn = $('copy-link-btn');
-  const proBtn = $('pro-interest-btn');
   const meta = $('response-meta');
   const statusPill = $('status-pill');
   const timing = $('timing');
@@ -1041,13 +1062,6 @@ const result = diagnose({
       copyLinkBtn.textContent = 'copy failed';
     }
     setTimeout(() => { copyLinkBtn.textContent = 'Copy link to this diagnosis'; }, 1400);
-  });
-
-  // ── Pro interest ─────────────────────────────────────────────────────
-  proBtn.addEventListener('click', () => {
-    track('pro_interest');
-    proBtn.textContent = 'Noted, thanks';
-    proBtn.disabled = true;
   });
 
   // ── init ─────────────────────────────────────────────────────────────
