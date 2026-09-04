@@ -1,4 +1,4 @@
-// doctor-flutter.js — Supabase Auth Deep Link Doctor (Flutter / supabase_flutter) core logic.
+// doctor-flutter.js: Supabase Auth Deep Link Doctor (Flutter / supabase_flutter) core logic.
 //
 // Pure, deterministic, 100% client-side: given a Flutter + supabase_flutter
 // OAuth / magic-link deep link configuration (iOS Info.plist, AndroidManifest
@@ -10,7 +10,7 @@
 // Nothing in this file makes a network request. It only reads the object you
 // pass to diagnose().
 //
-// This is the third sibling in the "Redirect Doctor" family — same glob
+// This is the third sibling in the "Redirect Doctor" family: same glob
 // matcher as the web (doctor-web.js) and Expo (doctor.js) tools (copied
 // verbatim, not imported, so this file has zero cross-repo dependencies),
 // same diagnose() shape, different domain rules for a native Flutter app
@@ -24,7 +24,7 @@
 //      typically a reverse-domain identifier)
 //  - https://supabase.com/docs/reference/dart/auth-signinwithoauth
 //      (signInWithOAuth(provider, redirectTo, authScreenLaunchMode, scopes,
-//      queryParams) — authScreenLaunchMode defaults to LaunchMode.platformDefault;
+//      queryParams): authScreenLaunchMode defaults to LaunchMode.platformDefault;
 //      LaunchMode.externalApplication is the documented choice for opening the
 //      auth screen outside the app so the OS can hand the deep link back)
 //  - https://pub.dev/packages/supabase_flutter
@@ -36,8 +36,7 @@
 //  - https://github.com/supabase/auth/issues/2447
 //      (redirect URLs containing an underscore, e.g. my_app://callback, are
 //      silently mangled by Google's OAuth redirect handling and *always*
-//      fail Supabase's redirect-URL check, falling back to Site URL instead —
-//      workaround is a hyphen instead of an underscore, e.g. my-app://callback)
+//      fail Supabase's redirect-URL check, falling back to Site URL instead: //      workaround is a hyphen instead of an underscore, e.g. my-app://callback)
 //
 // Works as an ES module (import { diagnose, expectedValues } from './doctor-flutter.js')
 // and, when loaded with <script type="module">, also publishes
@@ -61,9 +60,9 @@ function normalizeHost(rawHost) {
 
 // ───────────────────────── Supabase redirect-URL glob matcher ─────────────────────────
 // Copied verbatim from the web + Expo Redirect Doctor tools' doctor-web.js /
-// doctor.js — the allow-list syntax is a Supabase Auth feature, identical
+// doctor.js: the allow-list syntax is a Supabase Auth feature, identical
 // for every client. Per https://supabase.com/docs/guides/auth/redirect-urls
-// — "." and "/" are separator characters:
+//: "." and "/" are separator characters:
 //   *   any run of non-separator characters
 //   **  any run of characters, including separators
 //   ?   exactly one non-separator character
@@ -249,7 +248,7 @@ export function diagnose(config) {
     problems.push({
       severity: 'medium',
       code: 'scheme_reserved_http',
-      message: `"${scheme}" is http/https, not a custom scheme. That only works via iOS Universal Links / Android App Links (a separate setup: apple-app-site-association, assetlinks.json, autoVerify + a real https host) — if that's not what you've set up, use a custom scheme like "io.supabase.myapp" instead.`,
+      message: `"${scheme}" is http/https, not a custom scheme. That only works via iOS Universal Links / Android App Links (a separate setup: apple-app-site-association, assetlinks.json, autoVerify + a real https host): if that's not what you've set up, use a custom scheme like "io.supabase.myapp" instead.`,
       where: 'app.scheme',
     });
   } else if (schemeHasUnderscore || hostHasUnderscore) {
@@ -257,7 +256,7 @@ export function diagnose(config) {
     problems.push({
       severity: 'high',
       code: 'scheme_underscore',
-      message: `"${schemeHasUnderscore ? scheme : host}" contains an underscore. Google's OAuth redirect handling mangles underscores in redirect URLs — a scheme or host like "my_app" *always* fails Supabase's redirect-URL check and silently falls back to Site URL (tracked in supabase/auth#2447). Use a hyphen instead.`,
+      message: `"${schemeHasUnderscore ? scheme : host}" contains an underscore. Google's OAuth redirect handling mangles underscores in redirect URLs: a scheme or host like "my_app" *always* fails Supabase's redirect-URL check and silently falls back to Site URL (tracked in supabase/auth#2447). Use a hyphen instead.`,
       where,
     });
     fixes.push({
@@ -269,7 +268,7 @@ export function diagnose(config) {
     problems.push({
       severity: 'high',
       code: 'scheme_invalid_case',
-      message: `"${scheme}" has uppercase letters or whitespace. URL schemes are case-sensitive at the OS registration level and must not contain spaces — Android and iOS will fail to match the intent-filter / CFBundleURLSchemes entry otherwise.`,
+      message: `"${scheme}" has uppercase letters or whitespace. URL schemes are case-sensitive at the OS registration level and must not contain spaces: Android and iOS will fail to match the intent-filter / CFBundleURLSchemes entry otherwise.`,
       where: 'app.scheme',
     });
     fixes.push({ title: 'Use a lowercase scheme with no spaces', value: scheme.toLowerCase().replace(/\s+/g, ''), where: 'app.scheme' });
@@ -291,7 +290,7 @@ export function diagnose(config) {
     problems.push({
       severity: 'medium',
       code: 'site_url_is_localhost',
-      message: 'Supabase Site URL still points to localhost. Supabase falls back to Site URL whenever redirectTo is missing or not on the allow-list, so a rejected redirect silently sends users to a localhost URL — including from production installs.',
+      message: 'Supabase Site URL still points to localhost. Supabase falls back to Site URL whenever redirectTo is missing or not on the allow-list, so a rejected redirect silently sends users to a localhost URL: including from production installs.',
       where: 'supabase.siteUrl',
     });
     fixes.push({
@@ -307,7 +306,7 @@ export function diagnose(config) {
     problems.push({
       severity: 'medium',
       code: 'project_url_unusual',
-      message: `"${projectUrl}" doesn't look like a standard https://<ref>.supabase.co project URL. If this is a custom auth domain, confirm it's mapped correctly — otherwise check for a typo.`,
+      message: `"${projectUrl}" doesn't look like a standard https://<ref>.supabase.co project URL. If this is a custom auth domain, confirm it's mapped correctly: otherwise check for a typo.`,
       where: 'supabase.projectUrl',
     });
   } else if (!projectUrl) {
@@ -327,8 +326,8 @@ export function diagnose(config) {
       severity: 'high',
       code: isTrailingSlashOnly ? 'redirect_to_trailing_slash' : 'redirect_to_mismatch',
       message: isTrailingSlashOnly
-        ? `code.redirectTo is "${rawRedirectTo}" — a trailing slash that "${expectedRedirectTo}" doesn't have. Keep it exact: signInWithOAuth's redirectTo is matched against the allow-list and against Info.plist / the intent-filter byte-for-byte.`
-        : `code.redirectTo is "${rawRedirectTo}", but app.scheme + app.host produce "${expectedRedirectTo}". These must match exactly — Supabase rejects a redirect that isn't allow-listed exactly as sent, and falls back to Site URL.`,
+        ? `code.redirectTo is "${rawRedirectTo}": a trailing slash that "${expectedRedirectTo}" doesn't have. Keep it exact: signInWithOAuth's redirectTo is matched against the allow-list and against Info.plist / the intent-filter byte-for-byte.`
+        : `code.redirectTo is "${rawRedirectTo}", but app.scheme + app.host produce "${expectedRedirectTo}". These must match exactly: Supabase rejects a redirect that isn't allow-listed exactly as sent, and falls back to Site URL.`,
       where: 'code.redirectTo',
     });
     fixes.push({ title: 'Use the exact scheme://host redirectTo', value: expectedRedirectTo, where: 'code.redirectTo' });
@@ -371,7 +370,7 @@ export function diagnose(config) {
       problems.push({
         severity: 'high',
         code: 'ios_scheme_missing_in_plist',
-        message: `Info.plist's CFBundleURLSchemes doesn't list "${scheme}". Without it, iOS never hands the OAuth/magic-link redirect back to your app — Safari (or the auth screen) just sits on the URL, or the OS reports it can't open the link.`,
+        message: `Info.plist's CFBundleURLSchemes doesn't list "${scheme}". Without it, iOS never hands the OAuth/magic-link redirect back to your app: Safari (or the auth screen) just sits on the URL, or the OS reports it can't open the link.`,
         where: 'app.iosSchemesInPlist',
       });
       fixes.push({ title: 'Add the scheme to ios/Runner/Info.plist', value: buildInfoPlistSnippet(scheme), where: 'ios/Runner/Info.plist' });
@@ -407,7 +406,7 @@ export function diagnose(config) {
       problems.push({
         severity: 'low',
         code: 'android_autoverify_no_effect',
-        message: 'android:autoVerify="true" is set on a custom-scheme intent-filter. autoVerify only does anything for https Android App Links (it triggers Digital Asset Links verification) — on a custom scheme like this one it is silently ignored, so leaving it true just invites confusion later.',
+        message: 'android:autoVerify="true" is set on a custom-scheme intent-filter. autoVerify only does anything for https Android App Links (it triggers Digital Asset Links verification): on a custom scheme like this one it is silently ignored, so leaving it true just invites confusion later.',
         where: 'app.androidIntentFilter.autoVerify',
       });
       fixes.push({ title: 'Drop autoVerify on the custom-scheme intent-filter', value: '<intent-filter> <!-- no android:autoVerify attribute -->', where: 'AndroidManifest.xml' });
@@ -419,7 +418,7 @@ export function diagnose(config) {
     problems.push({
       severity: 'medium',
       code: 'launch_mode_in_app_webview',
-      message: 'authScreenLaunchMode is LaunchMode.inAppWebView. Several providers (Kakao, Discord, Facebook) detect an embedded WebView and either refuse to complete sign-in or never hand control back to the OS to trigger your custom-scheme redirect — the flow just hangs on the provider\'s page.',
+      message: 'authScreenLaunchMode is LaunchMode.inAppWebView. Several providers (Kakao, Discord, Facebook) detect an embedded WebView and either refuse to complete sign-in or never hand control back to the OS to trigger your custom-scheme redirect: the flow just hangs on the provider\'s page.',
       where: 'app.launchMode',
     });
     fixes.push({
@@ -431,7 +430,7 @@ export function diagnose(config) {
     problems.push({
       severity: 'low',
       code: 'launch_mode_not_set',
-      message: 'app.launchMode is not set. signInWithOAuth() defaults authScreenLaunchMode to LaunchMode.platformDefault, which on some devices opens an in-app browser tab that behaves inconsistently across providers — set it explicitly.',
+      message: 'app.launchMode is not set. signInWithOAuth() defaults authScreenLaunchMode to LaunchMode.platformDefault, which on some devices opens an in-app browser tab that behaves inconsistently across providers: set it explicitly.',
       where: 'app.launchMode',
     });
     fixes.push({
@@ -446,7 +445,7 @@ export function diagnose(config) {
     problems.push({
       severity: 'medium',
       code: 'auth_flow_type_implicit',
-      message: 'authFlowType is implicit. PKCE is the recommended flow for native apps — implicit flow returns the session in the URL fragment, which in-app browsers, custom tabs, and deep links don\'t always preserve intact.',
+      message: 'authFlowType is implicit. PKCE is the recommended flow for native apps: implicit flow returns the session in the URL fragment, which in-app browsers, custom tabs, and deep links don\'t always preserve intact.',
       where: 'app.authFlowType',
     });
     fixes.push({
@@ -476,14 +475,14 @@ export function diagnose(config) {
         problems.push({
           severity: 'high',
           code: 'provider_uri_points_to_app_scheme',
-          message: `${providerLabel(providerName)} has a redirect URI using your app's own scheme instead of the Supabase callback. In the OAuth handshake the provider redirects to Supabase first (${supabaseCallback}), and only then does Supabase redirect on to your app's scheme — your app's scheme never goes in the provider console.`,
+          message: `${providerLabel(providerName)} has a redirect URI using your app's own scheme instead of the Supabase callback. In the OAuth handshake the provider redirects to Supabase first (${supabaseCallback}), and only then does Supabase redirect on to your app's scheme: your app's scheme never goes in the provider console.`,
           where: 'provider.authorizedRedirectUris',
         });
       } else {
         problems.push({
           severity: 'high',
           code: 'provider_redirect_uri_missing',
-          message: `${providerLabel(providerName)} doesn't contain the exact URL "${supabaseCallback}". OAuth providers require an exact match here — wildcards aren't accepted.`,
+          message: `${providerLabel(providerName)} doesn't contain the exact URL "${supabaseCallback}". OAuth providers require an exact match here: wildcards aren't accepted.`,
           where: 'provider.authorizedRedirectUris',
         });
       }
@@ -495,7 +494,7 @@ export function diagnose(config) {
     }
   }
   checklist.push(supabaseCallback
-    ? `Add "${supabaseCallback}" to ${providerLabel(providerName)} — exact match, no wildcards.`
+    ? `Add "${supabaseCallback}" to ${providerLabel(providerName)}: exact match, no wildcards.`
     : 'Set supabase.projectUrl so the exact provider callback URL can be computed.');
 
   // ── 11. skipBrowserRedirect ───────────────────────────────────────────
@@ -503,7 +502,7 @@ export function diagnose(config) {
     problems.push({
       severity: 'low',
       code: 'skip_browser_redirect_manual',
-      message: "code.usesSkipBrowserRedirect is true — you're opening the OAuth URL yourself instead of letting signInWithOAuth() launch it. That's fine, but you now own presenting it (e.g. a custom tab / SFSafariViewController session) and routing the resulting redirect back through Supabase's deep-link handling yourself.",
+      message: "code.usesSkipBrowserRedirect is true: you're opening the OAuth URL yourself instead of letting signInWithOAuth() launch it. That's fine, but you now own presenting it (e.g. a custom tab / SFSafariViewController session) and routing the resulting redirect back through Supabase's deep-link handling yourself.",
       where: 'code.usesSkipBrowserRedirect',
     });
   }
@@ -513,7 +512,7 @@ export function diagnose(config) {
     problems.push({
       severity: 'low',
       code: 'auth_state_listener_missing',
-      message: "code.listensToAuthStateChange is false. Even once the deep link correctly reaches your app and supabase_flutter parses the session from it, nothing updates your UI without a listener — sign-in silently \"completes\" while the app still shows a logged-out screen.",
+      message: "code.listensToAuthStateChange is false. Even once the deep link correctly reaches your app and supabase_flutter parses the session from it, nothing updates your UI without a listener: sign-in silently \"completes\" while the app still shows a logged-out screen.",
       where: 'code.listensToAuthStateChange',
     });
     fixes.push({
@@ -524,7 +523,7 @@ export function diagnose(config) {
   }
 
   checklist.push('Use authFlowType: AuthFlowType.pkce and authScreenLaunchMode: LaunchMode.externalApplication together.');
-  checklist.push('Re-run this check after every change — Info.plist, AndroidManifest.xml, and the Supabase/provider consoles drift independently from your Dart code.');
+  checklist.push('Re-run this check after every change: Info.plist, AndroidManifest.xml, and the Supabase/provider consoles drift independently from your Dart code.');
 
   const sorted = sortProblems(problems);
   const highCount = sorted.filter((p) => p.severity === 'high').length;
@@ -554,7 +553,7 @@ export function diagnose(config) {
     fixes,
     checklist,
     disclaimer:
-      'Read-only, client-side analysis of the values you entered. Nothing is verified against your live Supabase project, Info.plist, AndroidManifest.xml, or provider console — always confirm in your own environment before shipping.',
+      'Read-only, client-side analysis of the values you entered. Nothing is verified against your live Supabase project, Info.plist, AndroidManifest.xml, or provider console: always confirm in your own environment before shipping.',
   };
 }
 
