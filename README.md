@@ -162,7 +162,7 @@ The rules this tool encodes come from:
 Found a `supabase_flutter` deep-link failure this tool misses, or a
 check that flags something that's actually fine? Open an issue:
 https://github.com/AndryRoby/flutter-supabase-doctor/issues, or write
-to andrej@arling.sk. Redact project refs, client secrets, and real
+to support@arling.sk. Redact project refs, client secrets, and real
 bundle IDs before posting: issues are public.
 
 ## License
